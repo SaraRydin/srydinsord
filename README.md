@@ -6,4 +6,4 @@ Technical writer portfolio for a mochup system called "Accessible School", start
 3. [Requirements (Quickstart)](https://github.com/SaraRydin/srydinsord/issues/3)
 4. [Your desktop (Quickstart)](https://github.com/SaraRydin/srydinsord/issues/4)
 5. [FAQs](https://github.com/SaraRydin/srydinsord/issues/7)
-6. more will come...
+6. [White paper 'How can I make my information more accessible'.](https://github.com/SaraRydin/srydinsord/issues/9)
