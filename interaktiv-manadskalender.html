@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interaktiv månadskalender för svenska småföretagare</title>
+<style>
+  :root {
+    --border: #d0d0d0;
+    --today: #fff4d6;
+    --deadline: #b3261e;
+    --weekend: #f7f7f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 24px;
+    color: #222;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .toolbar h1 {
+    font-size: 1.4rem;
+    margin: 0 auto 0 0;
+  }
+  button {
+    font: inherit;
+    padding: 6px 14px;
+    border: 1px solid #888;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button:hover { background: #eee; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    padding: 6px;
+    background: #f0f0f0;
+    font-size: 0.85rem;
+  }
+  td {
+    height: 110px;
+    padding: 4px;
+    position: relative;
+  }
+  td.other-month { background: #fafafa; color: #bbb; }
+  td.weekend { background: var(--weekend); }
+  td.today { background: var(--today); }
+  .day-number {
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  .deadline {
+    color: var(--deadline);
+    font-size: 0.72rem;
+    font-weight: bold;
+    margin-top: 2px;
+  }
+  .note {
+    margin-top: 4px;
+    font-size: 0.8rem;
+    min-height: 40px;
+    outline: none;
+    white-space: pre-wrap;
+  }
+  .legend {
+    margin-top: 12px;
+    font-size: 0.8rem;
+    color: #555;
+  }
+  .legend span.deadline { font-size: 0.8rem; }
+
+  @media print {
+    body { padding: 0; }
+    .toolbar button { display: none; }
+    .toolbar h1 { font-size: 1.2rem; }
+    td { height: 100px; }
+    @page { size: landscape; margin: 10mm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button id="prev">&larr; Föregående månad</button>
+  <h1 id="month-title"></h1>
+  <button id="next">Nästa månad &rarr;</button>
+  <button id="today-btn">Idag</button>
+  <button id="print-btn">Skriv ut</button>
+</div>
+
+<table id="calendar">
+  <thead>
+    <tr id="weekday-row"></tr>
+  </thead>
+  <tbody id="calendar-body"></tbody>
+</table>
+
+<p class="legend"><span class="deadline">Röd text</span> = deadline hos Skatteverket/Bolagsverket. Klicka i ett datum för att lägga till egna anteckningar - de sparas automatiskt i webbläsaren.</p>
+
+<script>
+const weekdays = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
+const monthNames = [
+  'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+  'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
+];
+
+function monthlyDeclarationDay(month) {
+  return (month === 0 || month === 7) ? 17 : 12;
+}
+
+function getDeadlinesForMonth(month) {
+  const deadlines = [
+    { day: monthlyDeclarationDay(month), label: 'Moms-/arbetsgivardeklaration + F-skatt' }
+  ];
+
+  const extra = {
+    0: [{ day: 31, label: 'Kontrolluppgifter till anställda' }],
+    1: [{ day: monthlyDeclarationDay(1), label: '+ momsdeklaration kv. 4', merge: true }],
+    4: [{ day: 2, label: 'Inkomstdeklaration 1 (ca. - kolla exakt datum)' }],
+    6: [
+      { day: 1, label: 'Inkomstdeklaration 2 (ca. - kolla exakt datum)' },
+      { day: 31, label: 'Sista dag - årsredovisning till Bolagsverket' }
+    ],
+    7: [{ day: monthlyDeclarationDay(7), label: '+ momsdeklaration kv. 2', merge: true }],
+    10: [{ day: monthlyDeclarationDay(10), label: '+ momsdeklaration kv. 3', merge: true }]
+  };
+
+  (extra[month] || []).forEach(item => {
+    if (item.merge) {
+      const existing = deadlines.find(d => d.day === item.day);
+      if (existing) {
+        existing.label += ' ' + item.label;
+        return;
+      }
+    }
+    deadlines.push(item);
+  });
+
+  return deadlines;
+}
+
+let viewDate = new Date();
+viewDate.setDate(1);
+
+function noteKey(date) {
+  return 'kalender-anteckning-' + date.toISOString().slice(0, 10);
+}
+
+function render() {
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  document.getElementById('month-title').textContent = monthNames[month] + ' ' + year;
+
+  const weekdayRow = document.getElementById('weekday-row');
+  weekdayRow.innerHTML = '';
+  weekdays.forEach(w => {
+    const th = document.createElement('th');
+    th.textContent = w;
+    weekdayRow.appendChild(th);
+  });
+
+  const firstOfMonth = new Date(year, month, 1);
+  const startOffset = (firstOfMonth.getDay() + 6) % 7; // Monday = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const deadlines = getDeadlinesForMonth(month);
+  const today = new Date();
+
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) {
+    cells.push({ day: daysInPrevMonth - startOffset + i + 1, otherMonth: true });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, otherMonth: false });
+  }
+  while (cells.length % 7 !== 0) {
+    cells.push({ day: cells.length - startOffset - daysInMonth + 1, otherMonth: true });
+  }
+
+  const body = document.getElementById('calendar-body');
+  body.innerHTML = '';
+  for (let row = 0; row < cells.length / 7; row++) {
+    const tr = document.createElement('tr');
+    for (let col = 0; col < 7; col++) {
+      const cell = cells[row * 7 + col];
+      const td = document.createElement('td');
+      const cellDate = new Date(year, month, cell.day);
+
+      if (cell.otherMonth) {
+        td.classList.add('other-month');
+      } else {
+        if (col >= 5) td.classList.add('weekend');
+        if (cellDate.toDateString() === today.toDateString()) td.classList.add('today');
+      }
+
+      const dayNumber = document.createElement('div');
+      dayNumber.className = 'day-number';
+      dayNumber.textContent = cell.day;
+      td.appendChild(dayNumber);
+
+      if (!cell.otherMonth) {
+        const deadline = deadlines.find(dl => dl.day === cell.day);
+        if (deadline) {
+          const dlEl = document.createElement('div');
+          dlEl.className = 'deadline';
+          dlEl.textContent = deadline.label;
+          td.appendChild(dlEl);
+        }
+
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.contentEditable = 'true';
+        const key = noteKey(cellDate);
+        note.textContent = localStorage.getItem(key) || '';
+        note.addEventListener('input', () => {
+          if (note.textContent.trim() === '') {
+            localStorage.removeItem(key);
+          } else {
+            localStorage.setItem(key, note.textContent);
+          }
+        });
+        td.appendChild(note);
+      }
+
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  }
+}
+
+document.getElementById('prev').addEventListener('click', () => {
+  viewDate.setMonth(viewDate.getMonth() - 1);
+  render();
+});
+document.getElementById('next').addEventListener('click', () => {
+  viewDate.setMonth(viewDate.getMonth() + 1);
+  render();
+});
+document.getElementById('today-btn').addEventListener('click', () => {
+  viewDate = new Date();
+  viewDate.setDate(1);
+  render();
+});
+document.getElementById('print-btn').addEventListener('click', () => window.print());
+
+render();
+</script>
+
+</body>
+</html>
