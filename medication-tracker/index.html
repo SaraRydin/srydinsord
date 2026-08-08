@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Medicinlager</title>
+<meta name="description" content="Håll koll på dina läkemedel – hur länge de räcker och när det är dags att hämta ut eller kontakta läkaren." />
+<meta name="theme-color" content="#0d9488" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Medicinlager" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="app-header">
+  <h1>Medicinlager</h1>
+  <button id="settingsBtn" class="icon-btn" aria-label="Inställningar" title="Inställningar">⚙️</button>
+</header>
+
+<main id="main">
+  <div id="emptyState" class="empty-state hidden">
+    <p>Du har inte lagt till några läkemedel än.</p>
+    <p>Tryck på <strong>+ Lägg till läkemedel</strong> nedan för att komma igång.</p>
+  </div>
+
+  <ul id="medList" class="med-list" aria-live="polite"></ul>
+</main>
+
+<button id="addBtn" class="fab" aria-label="Lägg till läkemedel">+ Lägg till läkemedel</button>
+
+<!-- Add/Edit medication dialog -->
+<dialog id="medDialog" class="sheet">
+  <form id="medForm" method="dialog">
+    <h2 id="medDialogTitle">Nytt läkemedel</h2>
+    <input type="hidden" id="medId" />
+
+    <label class="field">
+      <span>Namn på läkemedlet</span>
+      <input type="text" id="medName" required placeholder="t.ex. Levaxin 50 µg" autocomplete="off" />
+    </label>
+
+    <label class="field">
+      <span>Tabletter hemma just nu</span>
+      <input type="number" id="medHome" required min="0" step="1" inputmode="numeric" />
+    </label>
+
+    <label class="field">
+      <span>Tabletter som väntar på apoteket</span>
+      <input type="number" id="medPharmacy" required min="0" step="1" inputmode="numeric" value="0" />
+    </label>
+
+    <label class="field">
+      <span>Antal tabletter per dag</span>
+      <input type="number" id="medDose" required min="0.1" step="0.1" inputmode="decimal" value="1" />
+    </label>
+
+    <div class="dialog-actions">
+      <button type="button" id="deleteMedBtn" class="btn btn-danger hidden">Ta bort</button>
+      <div class="spacer"></div>
+      <button type="button" id="cancelMedBtn" class="btn btn-ghost">Avbryt</button>
+      <button type="submit" class="btn btn-primary">Spara</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Settings dialog -->
+<dialog id="settingsDialog" class="sheet">
+  <form id="settingsForm" method="dialog">
+    <h2>Inställningar</h2>
+
+    <label class="field">
+      <span>Varna för uttag när det är kvar (dagar hemma)</span>
+      <input type="number" id="pickupThreshold" min="1" step="1" inputmode="numeric" />
+    </label>
+
+    <label class="field">
+      <span>Varna för läkarkontakt när det är kvar (dagar totalt: hemma + apotek)</span>
+      <input type="number" id="doctorThreshold" min="1" step="1" inputmode="numeric" />
+    </label>
+
+    <p class="hint">Standard är 14 dagar för uttag och 21 dagar för läkarkontakt, eftersom det ofta tar längre tid att få en läkartid och nytt recept än att hämta ut på apoteket.</p>
+
+    <div class="dialog-actions">
+      <div class="spacer"></div>
+      <button type="button" id="cancelSettingsBtn" class="btn btn-ghost">Avbryt</button>
+      <button type="submit" class="btn btn-primary">Spara</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
